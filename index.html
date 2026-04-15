@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOCIAL BTI 3.2 | 大学生社交属性深度调研</title>
+    <style>
+        :root { --bg: #fdfdfd; --card: #ffffff; --text: #1c1e21; --accent: #007bff; --sub: #718096; }
+        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 40px 20px; color: var(--text); }
+        .container { background: var(--card); padding: 50px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); max-width: 800px; width: 100%; }
+        
+        /* 电脑端大图优化 */
+        #p-img { width: 450px; max-width: 90%; height: auto; margin: 20px auto; display: block; border-radius: 12px; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.08)); }
+        
+        .progress-bar { height: 4px; background: #edf2f7; border-radius: 2px; margin-bottom: 40px; }
+        #fill { height: 100%; background: var(--accent); width: 0%; transition: 0.4s; }
+        
+        h2 { font-size: 1.35rem; line-height: 1.6; margin-bottom: 35px; color: #2d3748; min-height: 60px; }
+        .option-btn { width: 100%; padding: 18px 25px; margin-bottom: 12px; border: 1px solid #edf2f7; border-radius: 12px; cursor: pointer; text-align: left; background: #fff; font-size: 1rem; transition: 0.2s; color: #4a5568; outline: none; }
+        .option-btn:hover { border-color: var(--accent); background: #f8fbff; color: var(--accent); transform: translateY(-1px); }
+        
+        #result-page { display: none; text-align: center; }
+        .p-name { font-size: 4.5rem; font-weight: 900; letter-spacing: -2px; margin: 10px 0; }
+        .score-box { color: var(--accent); font-weight: bold; margin-bottom: 10px; font-size: 1.2rem; }
+        .quote-box { font-size: 1.15rem; background: #f8f9fa; padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 6px solid var(--accent); text-align: left; line-height: 1.8; color: #2d3748; }
+        .desc-text { text-align: left; color: var(--sub); line-height: 1.9; font-size: 1.05rem; white-space: pre-line; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="main-title" style="text-align:center; font-size:0.9rem; color:#cbd5e0; letter-spacing:4px; margin-bottom:30px; user-select:none;">SOCIAL BTI RESEARCH v3.2</h1>
+    
+    <div id="quiz-page">
+        <div class="progress-bar"><div id="fill"></div></div>
+        <h2 id="q-text">正在载入深度社交探索题目...</h2>
+        <div id="options-list"></div>
+    </div>
+
+    <div id="result-page">
+        <div style="color:#cbd5e0; font-weight:bold; letter-spacing:2px;">RESEARCH ARCHIVE</div>
+        <img id="p-img" src="" alt="Persona Card">
+        <div id="p-name" class="p-name"></div>
+        <div id="score-display" class="score-box"></div>
+        <div id="user-quote" class="quote-box"></div>
+        <div id="p-desc" class="desc-text"></div>
+        <button onclick="location.reload()" style="background:none; border:1px solid #eee; padding:10px 25px; border-radius:8px; cursor:pointer; color:#999; font-size:0.9rem;">重新进行自我探索</button>
+    </div>
+</div>
+
+<script>
+// --- 配置区 ---
+const WEB3_KEY = "995eebab-64f3-43ca-a046-d99fbed1062a"; 
+
+const questions = [
+    { q: "1. 此时此刻，你认为校园里的社交对你来说是有意义的吗？", options: ["A. 极具意义，是我汲取能量的主要途径", "B. 偶尔有意义，取决于对方的灵魂有趣程度", "C. 某种形式的‘互助劳动’，谈不上什么意义", "D. 毫无意义，纯粹是对生命的消耗"], weights: [0, 2, 5, 8] },
+    { q: "2. 在目前的社交关系中，你通常扮演什么样的角色？", options: ["A. 组局者：主动筛选人选并掌控局面", "B. 附和者：很少主动，但被邀请时通常会礼貌出席", "C. 边缘观察者：在场但游离，观察多于参与", "D. 弃权者：已经基本退出了所有非必要的局"], weights: [0, 3, 6, 8] },
+    { q: "3. 结束了极其疲惫的一天回到宿舍，你更有可能向谁倾诉？", options: ["A. 舍友：在现实的空气中寻求即时安慰", "B. 线上老友：现实社交太累，只想打字", "C. 没人：通过自我代谢（打游戏/刷剧）解决", "D. 我不需要倾诉，这种行为本身就很消耗"], weights: [1, 4, 7, 0] },
+    { q: "4. 对于你而言，目前的校园社交状态让你感到舒服吗？", options: ["A. 非常舒适，我如鱼得水", "B. 尚可忍受，虽然偶尔觉得虚伪", "C. 感到明显的社交压力，每天都在扮演‘正常人’", "D. 已经麻木了，处于一种社交失语状态"], weights: [0, 3, 6, 8] },
+    { q: "5. 面对一个关系尚浅但你很欣赏的人，你会主动开启 Deep Talk 吗？", options: ["A. 会，我渴望挖掘灵魂深处的连接", "B. 视氛围而定，如果对方主动我会跟进", "C. 不会，我觉得这会冒犯到对方的边界", "D. 没兴趣，我不认为深度连接能轻易建立"], weights: [1, 3, 5, 8] },
+    { q: "6. 你参加集体活动（如讲座、聚餐）通常是出于什么动机？", options: ["A. 发自内心的主动攒局或参与", "B. 为了绩点或所谓的‘人脉’被迫营业", "C. 害怕被孤立，不得不维持合群的假象", "D. 已经完全不再参加任何非强制活动"], weights: [0, 4, 6, 8] },
+    { q: "7. 你认为“合群”这个词在当下的校园语境里是褒义还是贬义？", options: ["A. 褒义，代表出众的社会化能力", "B. 中性，一种生存技能而已", "C. 略带贬义，意味着丧失了个性", "D. 极度厌恶，这是平庸者的避难所"], weights: [0, 3, 5, 7] },
+    { q: "8. 当你决定推掉一个社交邀约时，你通常的内心感受是？", options: ["A. 遗憾，感觉错过了重要的信息或快乐", "B. 平静，我只是选择了更有意义的事", "C. 焦虑，需要费力想一个无懈可击的借口", "D. 狂喜，甚至有一种逃出生天的解脱感"], weights: [0, 2, 5, 8] },
+    { q: "9. 你是否觉得在网络评论区或游戏里，你比在现实中更健谈？", options: ["A. 否，我现实中也很有表达欲", "B. 是的，文字比语言让我更有安全感", "C. 差不多，我在哪儿都不太爱说话", "D. 现实中我近乎失语，但在网络上我生龙活虎"], weights: [0, 4, 2, 7] },
+    { q: "10. 在你看来，一个理想的宿舍关系应该是？", options: ["A. 亲密无间，大家共享生活的所有细节", "B. 礼貌客气，有需要时互相帮忙即可", "C. 井水不犯河水，保持绝对的私人空间", "D. 只是四个陌生人恰好被分到了一个房间"], weights: [0, 4, 6, 8] },
+    { q: "11. 面对社交网络（朋友圈/小红书）上的点赞，你的心态是？", options: ["A. 重要的情感反馈，我会在意谁点赞了", "B. 礼尚往来的社交税，随手回赞而已", "C. 感到疲惫，甚至觉得这是一种虚假的繁荣", "D. 已经关闭了朋友圈，彻底切断这种反馈回路"], weights: [1, 4, 6, 8] },
+    { q: "12. 你是否曾为了进入某个圈子而刻意改变过自己的言谈举止？", options: ["A. 经常，这是社会化进阶的必经之路", "B. 偶尔，为了适应特定的重要场合", "C. 很少，这让我感到极度的自我怀疑", "D. 从不，我无法接受那种对他人的表演"], weights: [0, 3, 6, 8] },
+    { q: "13. 当你在人群中感到孤独时，你通常会？", options: ["A. 寻找话题重新融入，对抗这种孤独感", "B. 接受这种状态，并以此观察人群", "C. 感到惊恐，想立刻逃离这个环境", "D. 已经习惯了，孤独是我在人群中的常态"], weights: [1, 4, 6, 8] },
+    { q: "14. 你认为“真正的朋友”在大学社交里是可遇不可求的吗？", options: ["A. 不是，只要主动就能交到真朋友", "B. 是的，需要极其漫长的磨合和缘分", "C. 我不再相信大学里存在这种纯粹的连接", "D. 没所谓，我不再对这种关系抱有期待"], weights: [0, 4, 6, 8] },
+    { q: "15. 你在社交中感到疲惫的主要来源是什么？", options: ["A. 时间管理，社交占用了我太多学习时间", "B. 情绪劳动，需要不断共情和回应他人", "C. 意义缺失，觉得所有的交谈都在原地打转", "D. 存在感缺失，觉得自己只是社交的背景板"], weights: [1, 5, 7, 8] },
+    { q: "16. 假如你现在有一个完全不需要社交的避难所，你会？", options: ["A. 偶尔去躲一下，但我还是需要回到社会", "B. 作为一个长期的充电站，定期光顾", "C. 只要物质条件允许，我希望永远住进去", "D. 现实中没有避难所，我正住在数字避难所里"], weights: [1, 4, 7, 8] },
+    { q: "17. 最后，你觉得你是在主宰自己的社交生活，还是被它拖着走？", options: ["A. 绝对主宰，我有权选择与谁连接", "B. 基本平衡，虽然有些应酬躲不掉", "C. 被动应付，我无法拒绝那些不得不去的局", "D. 已经弃权，我不再参与这场游戏"], weights: [0, 3, 6, 8] }
+];
+
+const personaData = {
+    GOAT: {
+        color: "#28a745",
+        quote: "“莫向外求的本质，已被你找到了。”",
+        desc: "【精神孤狼】你拥有极高的自我自洽度。你不是社交无能，而是社交‘高净值用户’。你不需要通过他人的反馈来确认价值，独处是你最高级的充电方式。社交对你而言是资源而非负担，你深谙独处与社交的平衡。"
+    },
+    NERD: {
+        color: "#007bff",
+        quote: "“怀揣火种的人，在等待那个对的壁炉。”",
+        desc: "【渴望者】你并不反感社交，你反感的是‘无效社交’。你怀揣着表达的火焰，只是在等待一个能听懂你语言、能进行灵魂深谈的人。你在寻找的是共鸣，而非指标。"
+    },
+    ZOMBIE: {
+        color: "#ffc107",
+        quote: "“你在人群中笑得很大声，灵魂却在打哈欠。”",
+        desc: "【社交僵尸】你正在经历‘集体性社交过劳’。你维持着体面的回复和礼仪，但这些全是生存任务。你的社交带宽已被榨干，请务必允许自己‘合法下线’，找回真实的自我。"
+    },
+    LOSER: {
+        color: "#dc3545",
+        quote: "“不要在数字避难所里，把自己活成透明。”",
+        desc: "【数字化隐士】你对现实社交产生了生理性的防御。因为嫌麻烦或害怕幻灭，你躲进了虚拟世界的怀抱。但这只是暂时的麻药，现实的荒原依然需要你去开垦，试着在现实中建立哪怕一个微小的连接。"
+    }
+};
+
+let step = 0, totalScore = 0, answersLog = {};
+
+function init() {
+    step = 0; totalScore = 0; answersLog = {};
+    loadQuestion();
+}
+
+function loadQuestion() {
+    const q = questions[step];
+    document.getElementById('fill').style.width = (step / questions.length) * 100 + "%";
+    document.getElementById('q-text').innerText = q.q;
+    const list = document.getElementById('options-list');
+    list.innerHTML = "";
+    
+    q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => {
+            answersLog[`Q${step + 1}`] = ["A", "B", "C", "D"][i];
+            totalScore += q.weights[i];
+            step++;
+            if(step < questions.length) loadQuestion(); else showResult();
+        };
+        list.appendChild(btn);
+    });
+}
+
+async function showResult() {
+    let key;
+    if (totalScore >= 100) key = "LOSER";
+    else if (totalScore >= 65) key = "ZOMBIE";
+    else if (totalScore >= 30) key = "NERD";
+    else key = "GOAT";
+
+    const p = personaData[key];
+    document.getElementById('quiz-page').style.display = 'none';
+    document.getElementById('result-page').style.display = 'block';
+    
+    document.getElementById('p-name').innerText = key;
+    document.getElementById('p-name').style.color = p.color;
+    document.getElementById('score-display').innerText = `调研原始分：${totalScore} / 136`;
+    document.getElementById('user-quote').innerText = p.quote;
+    document.getElementById('p-desc').innerText = p.desc;
+    document.getElementById('p-img').src = key.toLowerCase() + ".png";
+
+    // 远程异步上传
+    fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            access_key: WEB3_KEY,
+            subject: `Sample: ${key} (Score: ${totalScore})`,
+            ...answersLog,
+            Final_Score: totalScore,
+            Final_Persona: key
+        })
+    });
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
